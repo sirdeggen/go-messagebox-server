@@ -27,6 +27,7 @@ internal/
   db/               - SQLite database, migrations, queries
   handlers/         - HTTP route handlers
   logger/           - Toggleable structured logger
+test-client/        - Jest integration tests (TypeScript)
 ```
 
 ### Key Dependencies
@@ -38,6 +39,7 @@ internal/
 | `@bsv/payment-express-middleware` | `github.com/bsv-blockchain/go-bsv-middleware` (payment) |
 | Express.js | `net/http` (Go 1.22+ routing) |
 | Knex + MySQL | `database/sql` + SQLite (default) |
+| — | `github.com/bsv-blockchain/go-wallet-toolbox` (wallet) |
 
 ## Database
 
@@ -49,19 +51,28 @@ Uses SQLite by default (zero-config). Tables:
 - **server_fees** — Server-level delivery fees per box type
 - **device_registrations** — FCM tokens for push notifications
 
+## Wallet
+
+Uses `go-wallet-toolbox` with local SQLite storage for production wallet functionality. The wallet provides:
+
+- BRC-31 authentication via `go-bsv-middleware`
+- BRC-29 payment processing
+- Identity key derivation from `SERVER_PRIVATE_KEY`
+- Automatic storage migration on startup
+
+Network is configurable via `BSV_NETWORK` (mainnet/testnet).
+
 ## Differences from the Original
 
 1. **Database**: Uses SQLite instead of MySQL by default (configurable via `DB_DRIVER`/`DB_SOURCE`)
 2. **WebSockets**: Not yet implemented (HTTP API is fully compatible)
-3. **Firebase/FCM**: Push notification sending is stubbed — the permission and device registration system works, but actual FCM delivery requires Firebase Admin SDK integration
-4. **Wallet**: Uses `wallet.TestWallet` from go-sdk for middleware authentication; production deployments should use `go-wallet-toolbox`
-5. **Swagger**: Not included; the API surface matches the original exactly
+3. **Firebase/FCM**: Push notification sending is stubbed — device registration works, but actual FCM delivery requires Firebase Admin SDK integration
 
 ## Quick Start
 
 ```bash
 cp .env.example .env
-# Edit .env with your SERVER_PRIVATE_KEY
+# Edit .env with your SERVER_PRIVATE_KEY (64-char hex)
 
 go build -o messagebox-server ./cmd/server
 ./messagebox-server
@@ -71,14 +82,39 @@ go build -o messagebox-server ./cmd/server
 
 ```bash
 docker build -t messagebox-server .
-docker run -p 3000:3000 -e SERVER_PRIVATE_KEY=your-key messagebox-server
+docker run -p 8080:8080 -e SERVER_PRIVATE_KEY=your-hex-key messagebox-server
 ```
 
 ## Testing
 
+### Go unit tests
+
 ```bash
 go test ./...
 ```
+
+### Jest integration tests
+
+The `test-client/` directory contains 11 integration tests using `@bsv/message-box-client` and `@bsv/sdk` `ProtoWallet`, covering the full message lifecycle against a running server.
+
+```bash
+# Terminal 1: Start the server
+SERVER_PRIVATE_KEY=$(openssl rand -hex 32) go run ./cmd/server
+
+# Terminal 2: Run tests
+cd test-client
+npm install
+npx jest --verbose
+```
+
+**Tests cover:**
+- Send message (plaintext, JSON body, send-to-self)
+- List messages (populated box, empty box)
+- Acknowledge messages (valid, already-acknowledged, nonexistent)
+- Input validation (empty recipient, empty body)
+- Multiple messages in the same box
+
+All tests use real BRC-31 AuthFetch authentication against the running server.
 
 ## Environment Variables
 
@@ -91,4 +127,4 @@ go test ./...
 | `DB_DRIVER` | `sqlite3` | Database driver |
 | `DB_SOURCE` | `messagebox.db` | Database connection string |
 | `BSV_NETWORK` | `mainnet` | BSV network (`mainnet`, `testnet`) |
-| `ENABLE_WEBSOCKETS` | `true` | Enable WebSocket support (not yet implemented in Go) |
+| `ENABLE_WEBSOCKETS` | `true` | Enable WebSocket support (not yet implemented) |
