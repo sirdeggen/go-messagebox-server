@@ -16,8 +16,12 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/handlers"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
-	"github.com/bsv-blockchain/go-sdk/wallet"
-	"github.com/go-softwarelab/common/pkg/testingx"
+	sdk "github.com/bsv-blockchain/go-sdk/wallet"
+	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/defs"
+	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/services"
+	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/storage"
+	toolboxwallet "github.com/bsv-blockchain/go-wallet-toolbox/pkg/wallet"
+	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/wdk"
 )
 
 func main() {
@@ -44,8 +48,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create wallet from private key hex
-	w := wallet.NewTestWallet(&testingx.E{Verbose: true}, wallet.PrivHex(cfg.ServerPrivateKey))
+	// Create production wallet using go-wallet-toolbox
+	w, walletCleanup, err := createWallet(cfg)
+	if err != nil {
+		slog.Error("failed to create wallet", "error", err)
+		os.Exit(1)
+	}
+	defer walletCleanup()
 
 	srv := &handlers.Server{DB: database}
 
@@ -105,6 +114,50 @@ func main() {
 	if err := server.Shutdown(ctx); err != nil {
 		slog.Error("shutdown error", "error", err)
 	}
+}
+
+func createWallet(cfg *config.Config) (sdk.Interface, func(), error) {
+	network := defs.NetworkMainnet
+	if cfg.BSVNetwork == "testnet" {
+		network = defs.NetworkTestnet
+	}
+
+	svcConfig := defs.DefaultServicesConfig(network)
+	walletServices := services.New(slog.Default(), svcConfig)
+
+	// TODO: support remote storage via cfg.WalletStorageURL using storage.NewClient
+
+	// Use local SQLite storage
+	dbConfig := defs.DefaultDBConfig()
+	dbConfig.SQLite.ConnectionString = "wallet-storage.sqlite"
+
+	activeStorage, err := storage.NewGORMProvider(network, walletServices,
+		storage.WithDBConfig(dbConfig),
+		storage.WithLogger(slog.Default()),
+		storage.WithBackgroundBroadcasterContext(context.Background()),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create local storage: %w", err)
+	}
+
+	storageIdentityKey, err := wdk.IdentityKey(cfg.ServerPrivateKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to derive storage identity key: %w", err)
+	}
+
+	_, err = activeStorage.Migrate(context.Background(), "messagebox-storage", storageIdentityKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to migrate storage: %w", err)
+	}
+
+	w, err := toolboxwallet.New(network, cfg.ServerPrivateKey, activeStorage)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create wallet: %w", err)
+	}
+
+	return w, func() {
+		activeStorage.Stop()
+	}, nil
 }
 
 type corsHandler struct {
