@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
+	"github.com/bsv-blockchain/go-messagebox-server/internal/firebase"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
@@ -220,6 +222,13 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 			logger.Error("failed to insert message", "error", err)
 			writeError(w, 500, "ERR_INTERNAL", "An internal error has occurred.")
 			return
+		}
+
+		if db.ShouldUseFCMDelivery(boxType) {
+			go firebase.SendFCMNotification(s.DB, fr.recipient, firebase.FCMPayload{
+				Title:     "New Message",
+				MessageID: msgID,
+			})
 		}
 
 		results = append(results, result{Recipient: fr.recipient, MessageID: msgID})
