@@ -7,7 +7,19 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// RegisterDevice handles POST /registerDevice.
+// RegisterDevice godoc
+// @Summary      Register a device for push notifications
+// @Description  Registers a device with an FCM token for receiving push notifications. Supports iOS, Android, and web platforms.
+// @Tags         Devices
+// @Accept       json
+// @Produce      json
+// @Param        request body RegisterDeviceRequest true "Device registration details"
+// @Success      200  {object}  RegisterDeviceResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /registerDevice [post]
 func (s *Server) RegisterDevice(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
 	if identityKey == "" {
@@ -46,7 +58,16 @@ func (s *Server) RegisterDevice(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListDevices handles GET /devices.
+// ListDevices godoc
+// @Summary      List registered devices
+// @Description  Returns all devices registered for push notifications for the authenticated identity.
+// @Tags         Devices
+// @Produce      json
+// @Success      200  {object}  ListDevicesResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /devices [get]
 func (s *Server) ListDevices(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
 	if identityKey == "" {

@@ -11,7 +11,20 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// SendMessage handles POST /sendMessage.
+// SendMessage godoc
+// @Summary      Send a message to recipient(s)
+// @Description  Inserts a message into the target recipient's message box. Supports single or multiple recipients. Payment may be required depending on recipient's fee settings.
+// @Tags         Messages
+// @Accept       json
+// @Produce      json
+// @Param        request body SendMessageRequest true "Message to send"
+// @Success      200  {object}  SendMessageResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      403  {object}  DeliveryBlockedError
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /sendMessage [post]
 func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 	logger.Log("[DEBUG] Processing /sendMessage request...")
 

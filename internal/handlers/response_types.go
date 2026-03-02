@@ -84,12 +84,12 @@ type SetPermissionResponse struct {
 // PermissionDetail represents a permission in responses.
 // @Description Permission details
 type PermissionDetail struct {
-	Sender       interface{} `json:"sender" example:"03abc..."`
-	MessageBox   string      `json:"messageBox" example:"inbox"`
-	RecipientFee int         `json:"recipientFee" example:"100"`
-	Status       string      `json:"status,omitempty" example:"payment_required"`
-	CreatedAt    string      `json:"createdAt" example:"2024-01-01T12:00:00.000Z"`
-	UpdatedAt    string      `json:"updatedAt" example:"2024-01-01T12:00:00.000Z"`
+	Sender       *string `json:"sender" example:"03abc..."`
+	MessageBox   string  `json:"messageBox" example:"inbox"`
+	RecipientFee int     `json:"recipientFee" example:"100"`
+	Status       string  `json:"status,omitempty" example:"payment_required"`
+	CreatedAt    string  `json:"createdAt" example:"2024-01-01T12:00:00.000Z"`
+	UpdatedAt    string  `json:"updatedAt" example:"2024-01-01T12:00:00.000Z"`
 }
 
 // GetPermissionResponse represents the response for getPermission.

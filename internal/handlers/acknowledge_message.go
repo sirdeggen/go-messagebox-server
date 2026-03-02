@@ -7,7 +7,19 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// AcknowledgeMessage handles POST /acknowledgeMessage.
+// AcknowledgeMessage godoc
+// @Summary      Acknowledge receipt of messages
+// @Description  Removes acknowledged messages from the database for the authenticated identity. Used after a client has received and processed messages.
+// @Tags         Messages
+// @Accept       json
+// @Produce      json
+// @Param        request body AcknowledgeMessageRequest true "Message IDs to acknowledge"
+// @Success      200  {object}  SuccessResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /acknowledgeMessage [post]
 func (s *Server) AcknowledgeMessage(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
 	if identityKey == "" {

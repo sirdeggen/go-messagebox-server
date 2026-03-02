@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
+	_ "github.com/bsv-blockchain/go-messagebox-server/docs"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/config"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/firebase"
@@ -23,6 +24,7 @@ import (
 	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/storage"
 	toolboxwallet "github.com/bsv-blockchain/go-wallet-toolbox/pkg/wallet"
 	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/wdk"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 // @title           MessageBox Server API
@@ -105,11 +107,19 @@ func main() {
 		return 0, nil
 	}))
 
-	// Stack: CORS -> Auth -> Payment -> Routes
+	// create root mux for swagger to avoid auth
+	rootMux := http.NewServeMux()
+	rootMux.Handle("GET /swagger/", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
+
+	rootMux.Handle("/", authMiddleware.HTTPHandler(
+		paymentMiddleware.HTTPHandler(mux),
+	))
+
+	// Stack: CORS -> rootMux -> Auth -> Payment -> Routes
 	handler := &corsHandler{
-		next: authMiddleware.HTTPHandler(
-			paymentMiddleware.HTTPHandler(mux),
-		),
+		next: rootMux,
 	}
 
 	server := &http.Server{

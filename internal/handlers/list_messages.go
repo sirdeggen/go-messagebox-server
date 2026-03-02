@@ -7,7 +7,19 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// ListMessages handles POST /listMessages.
+// ListMessages godoc
+// @Summary      Retrieve messages from a message box
+// @Description  Returns all stored messages for the specified messageBox belonging to the authenticated identity. If the box does not exist or has no messages, an empty array is returned.
+// @Tags         Messages
+// @Accept       json
+// @Produce      json
+// @Param        request body ListMessagesRequest true "Message box to list messages from"
+// @Success      200  {object}  ListMessagesResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /listMessages [post]
 func (s *Server) ListMessages(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
 	if identityKey == "" {

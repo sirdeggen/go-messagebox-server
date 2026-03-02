@@ -10,7 +10,19 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// SetPermission handles POST /permissions/set.
+// SetPermission godoc
+// @Summary      Set a message permission
+// @Description  Sets fee requirements for receiving messages. Use recipientFee=0 for free, recipientFee=-1 to block, or a positive value for required payment in satoshis. Omit sender for box-wide defaults.
+// @Tags         Permissions
+// @Accept       json
+// @Produce      json
+// @Param        request body SetPermissionRequest true "Permission settings"
+// @Success      200  {object}  SetPermissionResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /permissions/set [post]
 func (s *Server) SetPermission(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
 	if identityKey == "" {
@@ -79,7 +91,19 @@ func (s *Server) SetPermission(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetPermission handles GET /permissions/get.
+// GetPermission godoc
+// @Summary      Get a message permission
+// @Description  Retrieves the permission setting for a specific sender or box-wide default for the authenticated identity.
+// @Tags         Permissions
+// @Produce      json
+// @Param        messageBox query string true "Name of the message box"
+// @Param        sender query string false "Sender's public key (omit for box-wide setting)"
+// @Success      200  {object}  GetPermissionResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /permissions/get [get]
 func (s *Server) GetPermission(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
 	if identityKey == "" {
@@ -125,9 +149,9 @@ func (s *Server) GetPermission(w http.ResponseWriter, r *http.Request) {
 			desc = fmt.Sprintf("Box-wide permission setting found for %s.", messageBox)
 		}
 
-		var senderVal any
+		var senderVal *string
 		if perm.Sender.Valid {
-			senderVal = perm.Sender.String
+			senderVal = &perm.Sender.String
 		}
 
 		writeJSON(w, 200, GetPermissionResponse{
@@ -156,7 +180,21 @@ func (s *Server) GetPermission(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ListPermissions handles GET /permissions/list.
+// ListPermissions godoc
+// @Summary      List message permissions
+// @Description  Returns all permission settings for the authenticated identity, optionally filtered by message box.
+// @Tags         Permissions
+// @Produce      json
+// @Param        messageBox query string false "Filter by message box name"
+// @Param        limit query int false "Maximum number of results (1-1000, default 100)"
+// @Param        offset query int false "Number of results to skip (default 0)"
+// @Param        createdAtOrder query string false "Sort order: 'asc' or 'desc' (default 'desc')"
+// @Success      200  {object}  ListPermissionsResponse
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /permissions/list [get]
 func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
 	if identityKey == "" {
@@ -207,9 +245,9 @@ func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 
 	var out []PermissionDetail
 	for _, p := range perms {
-		var senderVal any
+		var senderVal *string
 		if p.Sender.Valid {
-			senderVal = p.Sender.String
+			senderVal = &p.Sender.String
 		}
 		out = append(out, PermissionDetail{
 			Sender:       senderVal,
@@ -231,7 +269,20 @@ func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetQuote handles GET /permissions/quote.
+// GetQuote godoc
+// @Summary      Get a delivery quote
+// @Description  Returns fee information for sending a message to one or more recipients. Single recipient returns QuoteSingleResponse, multiple recipients returns QuoteMultiResponse.
+// @Tags         Permissions
+// @Produce      json
+// @Param        recipient query string true "Recipient public key (can be repeated for multiple recipients)"
+// @Param        messageBox query string true "Name of the message box"
+// @Success      200  {object}  QuoteSingleResponse "Single recipient quote"
+// @Success      200  {object}  QuoteMultiResponse "Multiple recipient quote"
+// @Failure      400  {object}  ErrorResponse
+// @Failure      401  {object}  ErrorResponse
+// @Failure      500  {object}  ErrorResponse
+// @Security     BSVAuth
+// @Router       /permissions/quote [get]
 func (s *Server) GetQuote(w http.ResponseWriter, r *http.Request) {
 	senderKey := getIdentityKey(r)
 	if senderKey == "" {
