@@ -3,6 +3,7 @@ package firebase
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	firebaseSDK "firebase.google.com/go/v4"
@@ -29,6 +30,7 @@ func Initialize(cfg Config) error {
 	if cfg.ProjectID == "" {
 		// Firebase not configured, disable silently
 		// should we throw an error here?
+		slog.Warn("skipping Firebase initialization ProjectID not provided for firebase config")
 		return nil
 	}
 
