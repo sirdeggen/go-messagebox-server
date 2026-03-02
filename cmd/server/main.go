@@ -11,11 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/config"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
+	"github.com/bsv-blockchain/go-messagebox-server/internal/firebase"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/handlers"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
-	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
 	sdk "github.com/bsv-blockchain/go-sdk/wallet"
 	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/defs"
 	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/services"
@@ -46,6 +47,17 @@ func main() {
 	if err := database.Migrate(); err != nil {
 		slog.Error("failed to run migrations", "error", err)
 		os.Exit(1)
+	}
+
+	// initalize firebase
+	if err := firebase.Initialize(firebase.Config{
+		ProjectID:          cfg.FirebaseProjectID,
+		ServiceAccountJSON: cfg.FirebaseServiceAccountJSON,
+		ServiceAccountPath: cfg.FirebaseServiceAccountPath,
+	}); err != nil {
+		slog.Warn("Firebase initialization failed, FCM disabled", "error", err)
+	} else if firebase.IsEnabled() {
+		logger.Log("Firebase initialized successfully")
 	}
 
 	// Create production wallet using go-wallet-toolbox

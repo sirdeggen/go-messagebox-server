@@ -331,6 +331,53 @@ func (d *DB) ListDevices(identityKey string) ([]DeviceRecord, error) {
 	return devices, rows.Err()
 }
 
+// ListActiveDevices returns all active FCM tokens for an identity key.
+func (d *DB) ListActiveDevices(identityKey string) ([]DeviceRecord, error) {
+	rows, err := d.Query(
+		`SELECT id, identity_key, fcm_token, device_id, platform, active, created_at, updated_at, last_used
+		 FROM device_registrations WHERE identity_key = ? AND active = 1 ORDER BY updated_at DESC`,
+		identityKey,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var devices []DeviceRecord
+	for rows.Next() {
+		var dev DeviceRecord
+		if err := rows.Scan(&dev.ID, &dev.IdentityKey, &dev.FCMToken, &dev.DeviceID, &dev.Platform, &dev.Active, &dev.CreatedAt, &dev.UpdatedAt, &dev.LastUsed); err != nil {
+			return nil, err
+		}
+		devices = append(devices, dev)
+	}
+
+	return devices, rows.Err()
+}
+
+// UpdateDeviceLastUsed updates the last_used timestamp for a device.
+func (d *DB) UpdateDeviceLastUsed(fcmToken string) error {
+	_, err := d.Exec(
+		`UPDATE device_registrations SET last_used = ?, updated_at = ? WHERE fcm_token = ?`,
+		time.Now(),
+		time.Now(),
+		fcmToken,
+	)
+
+	return err
+}
+
+// DeactivateDevice marks a device as inactive (invalid token).
+func (d *DB) DeactivateDevice(fcmToken string) error {
+	_, err := d.Exec(
+		`UPDATE device_registrations SET active= 0, updated_at = ? WHERE fcm_token = ?`,
+		time.Now(),
+		fcmToken,
+	)
+
+	return err
+}
+
 // ShouldUseFCMDelivery checks if FCM delivery should be used for this message box.
 func ShouldUseFCMDelivery(messageBox string) bool {
 	return messageBox == "notifications"
