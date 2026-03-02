@@ -45,5 +45,5 @@ func (s *Server) AcknowledgeMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, 200, map[string]string{"status": "success"})
+	writeJSON(w, 200, SuccessResponse{Status: "success"})
 }

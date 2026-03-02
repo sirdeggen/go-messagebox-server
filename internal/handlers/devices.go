@@ -39,10 +39,10 @@ func (s *Server) RegisterDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, 200, map[string]any{
-		"status":   "success",
-		"message":  "Device registered successfully for push notifications",
-		"deviceId": id,
+	writeJSON(w, 200, RegisterDeviceResponse{
+		Status:   "success",
+		Message:  "Device registered successfully for push notifications",
+		DeviceID: id,
 	})
 }
 
@@ -91,8 +91,8 @@ func (s *Server) ListDevices(w http.ResponseWriter, r *http.Request) {
 		out = []DeviceOut{}
 	}
 
-	writeJSON(w, 200, map[string]any{
-		"status":  "success",
-		"devices": out,
+	writeJSON(w, 200, ListDevicesResponse{
+		Status:  "success",
+		Devices: out,
 	})
 }

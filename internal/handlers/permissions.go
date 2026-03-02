@@ -18,11 +18,7 @@ func (s *Server) SetPermission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Sender       *string `json:"sender,omitempty"`
-		MessageBox   string  `json:"messageBox"`
-		RecipientFee *int    `json:"recipientFee"`
-	}
+	var req SetPermissionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, 400, "ERR_INVALID_JSON", "Invalid JSON body")
 		return
@@ -77,9 +73,9 @@ func (s *Server) SetPermission(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, 200, map[string]string{
-		"status":      "success",
-		"description": description,
+	writeJSON(w, 200, SetPermissionResponse{
+		Status:      "success",
+		Description: description,
 	})
 }
 
@@ -134,16 +130,16 @@ func (s *Server) GetPermission(w http.ResponseWriter, r *http.Request) {
 			senderVal = perm.Sender.String
 		}
 
-		writeJSON(w, 200, map[string]any{
-			"status":      "success",
-			"description": desc,
-			"permission": map[string]any{
-				"sender":       senderVal,
-				"messageBox":   messageBox,
-				"recipientFee": perm.RecipientFee,
-				"status":       status,
-				"createdAt":    perm.CreatedAt.Format("2006-01-02T15:04:05.000Z"),
-				"updatedAt":    perm.UpdatedAt.Format("2006-01-02T15:04:05.000Z"),
+		writeJSON(w, 200, GetPermissionResponse{
+			Status:      "success",
+			Description: desc,
+			Permission: &PermissionDetail{
+				Sender:       senderVal,
+				MessageBox:   messageBox,
+				RecipientFee: perm.RecipientFee,
+				Status:       status,
+				CreatedAt:    perm.CreatedAt.Format("2006-01-02T15:04:05.000Z"),
+				UpdatedAt:    perm.UpdatedAt.Format("2006-01-02T15:04:05.000Z"),
 			},
 		})
 	} else {
@@ -153,9 +149,9 @@ func (s *Server) GetPermission(w http.ResponseWriter, r *http.Request) {
 		} else {
 			desc = fmt.Sprintf("No box-wide permission setting found for %s.", messageBox)
 		}
-		writeJSON(w, 200, map[string]any{
-			"status":      "success",
-			"description": desc,
+		writeJSON(w, 200, GetPermissionResponse{
+			Status:      "success",
+			Description: desc,
 		})
 	}
 }
@@ -228,10 +224,10 @@ func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 		out = []PermissionDetail{}
 	}
 
-	writeJSON(w, 200, map[string]any{
-		"status":      "success",
-		"permissions": out,
-		"totalCount":  total,
+	writeJSON(w, 200, ListPermissionsResponse{
+		Status:      "success",
+		Permissions: out,
+		TotalCount:  total,
 	})
 }
 
@@ -288,12 +284,12 @@ func (s *Server) GetQuote(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 500, "ERR_INTERNAL", "An internal error has occurred.")
 			return
 		}
-		writeJSON(w, 200, map[string]any{
-			"status":      "success",
-			"description": "Message delivery quote generated.",
-			"quote": map[string]int{
-				"deliveryFee":  deliveryFee,
-				"recipientFee": recipientFee,
+		writeJSON(w, 200, QuoteSingleResponse{
+			Status:      "success",
+			Description: "Message delivery quote generated.",
+			Quote: QuoteSingle{
+				DeliveryFee:  deliveryFee,
+				RecipientFee: recipientFee,
 			},
 		})
 		return
@@ -331,15 +327,22 @@ func (s *Server) GetQuote(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(w, 200, map[string]any{
-		"status":            "success",
-		"description":       fmt.Sprintf("Message delivery quotes generated for %d recipients.", len(recipients)),
-		"quotesByRecipient": quotes,
-		"totals": map[string]int{
-			"deliveryFees":              totalDeliveryFees,
-			"recipientFees":             totalRecipientFees,
-			"totalForPayableRecipients": totalDeliveryFees + totalRecipientFees,
+	if quotes == nil {
+		quotes = []QuoteEntry{}
+	}
+	if blockedRecipients == nil {
+		blockedRecipients = []string{}
+	}
+
+	writeJSON(w, 200, QuoteMultiResponse{
+		Status:            "success",
+		Description:       fmt.Sprintf("Message delivery quotes generated for %d recipients.", len(recipients)),
+		QuotesByRecipient: quotes,
+		Totals: QuoteTotals{
+			DeliveryFees:              totalDeliveryFees,
+			RecipientFees:             totalRecipientFees,
+			TotalForPayableRecipients: totalDeliveryFees + totalRecipientFees,
 		},
-		"blockedRecipients": blockedRecipients,
+		BlockedRecipients: blockedRecipients,
 	})
 }

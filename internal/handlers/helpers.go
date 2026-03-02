@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
-	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
 )
 
@@ -26,10 +26,10 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 
 // writeError writes a JSON error response.
 func writeError(w http.ResponseWriter, status int, code, description string) {
-	writeJSON(w, status, map[string]string{
-		"status":      "error",
-		"code":        code,
-		"description": description,
+	writeJSON(w, status, ErrorResponse{
+		Status:      "error",
+		Code:        code,
+		Description: description,
 	})
 }
 

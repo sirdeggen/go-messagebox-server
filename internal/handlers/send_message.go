@@ -153,11 +153,11 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(blocked) > 0 {
-		writeJSON(w, 403, map[string]any{
-			"status":            "error",
-			"code":              "ERR_DELIVERY_BLOCKED",
-			"description":       fmt.Sprintf("Blocked recipients: %s", strings.Join(blocked, ", ")),
-			"blockedRecipients": blocked,
+		writeJSON(w, 403, DeliveryBlockedError{
+			Status:            "error",
+			Code:              "ERR_DELIVERY_BLOCKED",
+			Description:       fmt.Sprintf("Blocked recipients: %s", strings.Join(blocked, ", ")),
+			BlockedRecipients: blocked,
 		})
 		return
 	}
@@ -214,9 +214,12 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 		results = append(results, SendMessageResult{Recipient: fr.recipient, MessageID: msgID})
 	}
 
-	writeJSON(w, 200, map[string]any{
-		"status":  "success",
-		"message": fmt.Sprintf("Your message has been sent to %d recipient(s).", len(results)),
-		"results": results,
+	if results == nil {
+		results = []SendMessageResult{}
+	}
+	writeJSON(w, 200, SendMessageResponse{
+		Status:  "success",
+		Message: fmt.Sprintf("Your message has been sent to %d recipient(s).", len(results)),
+		Results: results,
 	})
 }
