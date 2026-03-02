@@ -11,21 +11,6 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// SendMessageRequest is the expected JSON body for /sendMessage.
-type SendMessageRequest struct {
-	Message *SendMessageBody `json:"message"`
-	Payment json.RawMessage  `json:"payment,omitempty"`
-}
-
-// SendMessageBody holds the message fields.
-type SendMessageBody struct {
-	Recipient  json.RawMessage `json:"recipient"`
-	Recipients json.RawMessage `json:"recipients,omitempty"`
-	MessageBox string          `json:"messageBox"`
-	MessageID  json.RawMessage `json:"messageId"`
-	Body       json.RawMessage `json:"body"`
-}
-
 // SendMessage handles POST /sendMessage.
 func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 	logger.Log("[DEBUG] Processing /sendMessage request...")
@@ -192,12 +177,7 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store messages
-	type result struct {
-		Recipient string `json:"recipient"`
-		MessageID string `json:"messageId"`
-	}
-	var results []result
+	var results []SendMessageResult
 	for i, fr := range feeRows {
 		mbID, err := s.DB.GetMessageBoxID(fr.recipient, boxType)
 		if err != nil {
@@ -231,7 +211,7 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 
-		results = append(results, result{Recipient: fr.recipient, MessageID: msgID})
+		results = append(results, SendMessageResult{Recipient: fr.recipient, MessageID: msgID})
 	}
 
 	writeJSON(w, 200, map[string]any{

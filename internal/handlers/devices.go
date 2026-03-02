@@ -7,13 +7,6 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// RegisterDeviceRequest is the expected JSON body for /registerDevice.
-type RegisterDeviceRequest struct {
-	FCMToken string  `json:"fcmToken"`
-	DeviceID *string `json:"deviceId,omitempty"`
-	Platform *string `json:"platform,omitempty"`
-}
-
 // RegisterDevice handles POST /registerDevice.
 func (s *Server) RegisterDevice(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
@@ -68,24 +61,13 @@ func (s *Server) ListDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type deviceOut struct {
-		ID        int    `json:"id"`
-		DeviceID  *string `json:"deviceId"`
-		Platform  *string `json:"platform"`
-		FCMToken  string `json:"fcmToken"`
-		Active    bool   `json:"active"`
-		CreatedAt string `json:"createdAt"`
-		UpdatedAt string `json:"updatedAt"`
-		LastUsed  string `json:"lastUsed,omitempty"`
-	}
-
-	var out []deviceOut
+	var out []DeviceOut
 	for _, d := range devices {
 		token := d.FCMToken
 		if len(token) > 10 {
 			token = "..." + token[len(token)-10:]
 		}
-		dev := deviceOut{
+		dev := DeviceOut{
 			ID:        d.ID,
 			FCMToken:  token,
 			Active:    d.Active,
@@ -106,7 +88,7 @@ func (s *Server) ListDevices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if out == nil {
-		out = []deviceOut{}
+		out = []DeviceOut{}
 	}
 
 	writeJSON(w, 200, map[string]any{

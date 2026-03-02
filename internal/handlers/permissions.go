@@ -209,21 +209,13 @@ func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type permOut struct {
-		Sender       any    `json:"sender"`
-		MessageBox   string `json:"messageBox"`
-		RecipientFee int    `json:"recipientFee"`
-		CreatedAt    string `json:"createdAt"`
-		UpdatedAt    string `json:"updatedAt"`
-	}
-
-	var out []permOut
+	var out []PermissionDetail
 	for _, p := range perms {
 		var senderVal any
 		if p.Sender.Valid {
 			senderVal = p.Sender.String
 		}
-		out = append(out, permOut{
+		out = append(out, PermissionDetail{
 			Sender:       senderVal,
 			MessageBox:   p.MessageBox,
 			RecipientFee: p.RecipientFee,
@@ -233,7 +225,7 @@ func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if out == nil {
-		out = []permOut{}
+		out = []PermissionDetail{}
 	}
 
 	writeJSON(w, 200, map[string]any{
@@ -307,16 +299,7 @@ func (s *Server) GetQuote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Multi-recipient
-	type quoteEntry struct {
-		Recipient    string `json:"recipient"`
-		MessageBox   string `json:"messageBox"`
-		DeliveryFee  int    `json:"deliveryFee"`
-		RecipientFee int    `json:"recipientFee"`
-		Status       string `json:"status"`
-	}
-
-	var quotes []quoteEntry
+	var quotes []QuoteEntry
 	var blockedRecipients []string
 	totalRecipientFees := 0
 	totalDeliveryFees := 0
@@ -339,7 +322,7 @@ func (s *Server) GetQuote(w http.ResponseWriter, r *http.Request) {
 		}
 		totalDeliveryFees += deliveryFee
 
-		quotes = append(quotes, quoteEntry{
+		quotes = append(quotes, QuoteEntry{
 			Recipient:    rec,
 			MessageBox:   messageBox,
 			DeliveryFee:  deliveryFee,
@@ -349,12 +332,12 @@ func (s *Server) GetQuote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, 200, map[string]any{
-		"status":      "success",
-		"description": fmt.Sprintf("Message delivery quotes generated for %d recipients.", len(recipients)),
+		"status":            "success",
+		"description":       fmt.Sprintf("Message delivery quotes generated for %d recipients.", len(recipients)),
 		"quotesByRecipient": quotes,
 		"totals": map[string]int{
-			"deliveryFees":             totalDeliveryFees,
-			"recipientFees":            totalRecipientFees,
+			"deliveryFees":              totalDeliveryFees,
+			"recipientFees":             totalRecipientFees,
 			"totalForPayableRecipients": totalDeliveryFees + totalRecipientFees,
 		},
 		"blockedRecipients": blockedRecipients,

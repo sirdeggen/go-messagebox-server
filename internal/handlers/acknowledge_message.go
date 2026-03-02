@@ -7,11 +7,6 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
-// AcknowledgeMessageRequest is the expected JSON body for /acknowledgeMessage.
-type AcknowledgeMessageRequest struct {
-	MessageIDs []string `json:"messageIds"`
-}
-
 // AcknowledgeMessage handles POST /acknowledgeMessage.
 func (s *Server) AcknowledgeMessage(w http.ResponseWriter, r *http.Request) {
 	identityKey := getIdentityKey(r)
