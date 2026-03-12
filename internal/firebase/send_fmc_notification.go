@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"firebase.google.com/go/v4/messaging"
-	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
+	"github.com/bsv-blockchain/go-messagebox-server/pkg/db"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 )
 
