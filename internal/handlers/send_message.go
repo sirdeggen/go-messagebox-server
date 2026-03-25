@@ -227,8 +227,10 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 		perRecipientOutputs, err = buildPerRecipientOutputs(req.Payment.Outputs, deliveryFee, feeRows)
 		if err != nil {
 			if omErr, ok := err.(*OutputMappingError); ok {
+				logger.Error("output mapping failed", "code", omErr.Code, "description", omErr.Description)
 				writeError(w, 400, omErr.Code, omErr.Description)
 			} else {
+				logger.Error("output mapping failed", "error", err)
 				writeError(w, 500, "ERR_INTERNAL", fmt.Sprintf("Failed to map payment outputs to recipients: %v", err))
 			}
 			return
@@ -267,6 +269,7 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 
 		if err := s.DB.InsertMessage(msgID, mbID, senderKey, fr.recipient, string(bodyBytes)); err != nil {
 			if errors.Is(err, db.ErrDuplicateMessage) {
+				logger.Error("duplicate message rejected", "messageId", msgID)
 				writeError(w, 400, "ERR_DUPLICATE_MESSAGE", "Duplicate message.")
 				return
 			}

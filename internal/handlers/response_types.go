@@ -81,8 +81,8 @@ type SetPermissionResponse struct {
 	Description string `json:"description" example:"Messages from sender to inbox now require 100 satoshis."`
 }
 
-// PermissionDetail represents a permission in responses.
-// @Description Permission details
+// PermissionDetail is used by GET /permissions/get — client returns it raw, expects camelCase.
+// @Description Permission details (camelCase for getPermission endpoint)
 type PermissionDetail struct {
 	Sender       *string `json:"sender" example:"03abc..."`
 	MessageBox   string  `json:"messageBox" example:"inbox"`
@@ -90,6 +90,16 @@ type PermissionDetail struct {
 	Status       string  `json:"status,omitempty" example:"payment_required"`
 	CreatedAt    string  `json:"createdAt" example:"2024-01-01T12:00:00.000Z"`
 	UpdatedAt    string  `json:"updatedAt" example:"2024-01-01T12:00:00.000Z"`
+}
+
+// PermissionDetailList is used by GET /permissions/list — client maps explicitly from snake_case.
+// @Description Permission details (snake_case for listPermissions endpoint)
+type PermissionDetailList struct {
+	Sender       *string `json:"sender" example:"03abc..."`
+	MessageBox   string  `json:"message_box" example:"inbox"`
+	RecipientFee int     `json:"recipient_fee" example:"100"`
+	CreatedAt    string  `json:"created_at" example:"2024-01-01T12:00:00.000Z"`
+	UpdatedAt    string  `json:"updated_at" example:"2024-01-01T12:00:00.000Z"`
 }
 
 // GetPermissionResponse represents the response for getPermission.
@@ -103,9 +113,9 @@ type GetPermissionResponse struct {
 // ListPermissionsResponse represents the response for listPermissions.
 // @Description Response containing list of permissions
 type ListPermissionsResponse struct {
-	Status      string             `json:"status" example:"success"`
-	Permissions []PermissionDetail `json:"permissions"`
-	TotalCount  int                `json:"totalCount" example:"10"`
+	Status      string                 `json:"status" example:"success"`
+	Permissions []PermissionDetailList `json:"permissions"`
+	TotalCount  int                    `json:"totalCount" example:"10"`
 }
 
 // QuoteSingle represents a single-recipient quote.
