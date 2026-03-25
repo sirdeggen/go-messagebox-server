@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"testing"
 
@@ -162,6 +163,25 @@ func TestQuoteFlow(t *testing.T) {
 	}
 	if rf != 10 {
 		t.Fatalf("expected 10 (smart default), got %d", rf)
+	}
+}
+
+func TestInsertDuplicateMessage(t *testing.T) {
+	srv := setupTestServer(t)
+
+	mbID, err := srv.DB.EnsureMessageBox(mockIdentityKey, "inbox")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body := `{"message":"hello"}`
+	if err := srv.DB.InsertMessage("dup-msg-1", mbID, "sender123", mockIdentityKey, body); err != nil {
+		t.Fatal(err)
+	}
+
+	err = srv.DB.InsertMessage("dup-msg-1", mbID, "sender123", mockIdentityKey, body)
+	if !errors.Is(err, db.ErrDuplicateMessage) {
+		t.Fatalf("expected ErrDuplicateMessage, got %v", err)
 	}
 }
 

@@ -20,7 +20,6 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
 	sdk "github.com/bsv-blockchain/go-sdk/wallet"
-	sdkWallet "github.com/bsv-blockchain/go-sdk/wallet"
 	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/defs"
 	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/services"
 	"github.com/bsv-blockchain/go-wallet-toolbox/pkg/storage"
@@ -83,7 +82,7 @@ func main() {
 	}
 	defer walletCleanup()
 
-	srv := &handlers.Server{DB: database}
+	srv := handlers.NewServer(database, w)
 
 	// Build router
 	mux := http.NewServeMux()
@@ -172,7 +171,7 @@ func createWalletWithRemoteStorage(cfg *config.Config, network defs.BSVNetwork) 
 		return nil, nil, fmt.Errorf("failed to parse server private key: %w", err)
 	}
 
-	protoWallet, err := sdkWallet.NewCompletedProtoWallet(key)
+	protoWallet, err := sdk.NewCompletedProtoWallet(key)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create proto wallet: %w", err)
 	}

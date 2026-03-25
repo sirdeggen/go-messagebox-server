@@ -2,8 +2,12 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 )
+
+// ErrDuplicateMessage is returned when a message with the same ID already exists.
+var ErrDuplicateMessage = errors.New("duplicate message")
 
 // MessageBoxRecord represents a row in the messageBox table.
 type MessageBoxRecord struct {
@@ -73,14 +77,24 @@ func (d *DB) GetMessageBoxID(identityKey, boxType string) (int64, error) {
 	return id, err
 }
 
-// InsertMessage inserts a message, ignoring duplicates.
+// InsertMessage inserts a message. Returns ErrDuplicateMessage if the messageId already exists.
 func (d *DB) InsertMessage(messageID string, messageBoxID int64, sender, recipient, body string) error {
 	now := time.Now()
-	_, err := d.Exec(
+	res, err := d.Exec(
 		`INSERT OR IGNORE INTO messages (messageId, messageBoxId, sender, recipient, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		messageID, messageBoxID, sender, recipient, body, now, now,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrDuplicateMessage
+	}
+	return nil
 }
 
 // ListMessages returns messages for a recipient in a specific messageBox.
