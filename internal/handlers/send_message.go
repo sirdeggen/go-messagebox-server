@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/firebase"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
+	sdk "github.com/bsv-blockchain/go-sdk/wallet"
 )
 
 // SendMessage godoc
@@ -137,11 +139,6 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type feeRow struct {
-		recipient    string
-		recipientFee int
-		allowed      bool
-	}
 	var feeRows []feeRow
 	for _, recip := range recipients {
 		recip = strings.TrimSpace(recip)
@@ -184,10 +181,60 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	requiresPayment := deliveryFee > 0 || anyRecipientFee
+	perRecipientOutputs := make(map[string][]PaymentOutput)
 
-	if requiresPayment && (len(req.Payment) == 0 || string(req.Payment) == "null") {
-		writeError(w, 400, "ERR_MISSING_PAYMENT_TX", "Payment transaction data is required for payable delivery.")
-		return
+	// payments internalization
+	if requiresPayment {
+		if req.Payment == nil || len(req.Payment.Tx) == 0 || len(req.Payment.Outputs) == 0 {
+			writeError(w, 400, "ERR_MISSING_PAYMENT_TX", "Payment transaction data is required for payable delivery.")
+			return
+		}
+
+		if deliveryFee > 0 {
+			serverOutput := req.Payment.Outputs[0] // server delivery fee is the output at index 0
+
+			sdkOutput, err := toSDKInternalizeOutput(serverOutput)
+			if err != nil {
+				writeError(w, 400, "ERR_INVALID_PAYMENT_OUTPUT", fmt.Sprintf("Invalid payment output: %v", err))
+				return
+			}
+
+			description := req.Payment.Description
+			if description == "" {
+				description = "MessageBox delivery payment"
+			}
+
+			internalizeArgs := sdk.InternalizeActionArgs{
+				Tx:          req.Payment.Tx,
+				Outputs:     []sdk.InternalizeOutput{sdkOutput},
+				Description: description,
+				Labels:      req.Payment.Labels,
+			}
+
+			result, err := s.wallet.InternalizeAction(r.Context(), internalizeArgs, "messagebox-server")
+			if err != nil {
+				logger.Error("failed to internalize delivery fee", "error", err)
+				writeError(w, 500, "ERR_INTERNALIZE_FAILED", fmt.Sprintf("Failed to internalize payment: %v", err))
+				return
+			}
+			if !result.Accepted {
+				writeError(w, 400, "ERR_INSUFFICIENT_PAYMENT", "Payment was not accepted by the server.")
+				return
+			}
+			logger.Log("[DEBUG] Internalized server delivery output at index 0")
+		}
+
+		perRecipientOutputs, err = buildPerRecipientOutputs(req.Payment.Outputs, deliveryFee, feeRows)
+		if err != nil {
+			if omErr, ok := err.(*OutputMappingError); ok {
+				logger.Error("output mapping failed", "code", omErr.Code, "description", omErr.Description)
+				writeError(w, 400, omErr.Code, omErr.Description)
+			} else {
+				logger.Error("output mapping failed", "error", err)
+				writeError(w, 500, "ERR_INTERNAL", fmt.Sprintf("Failed to map payment outputs to recipients: %v", err))
+			}
+			return
+		}
 	}
 
 	var results []SendMessageResult
@@ -205,13 +252,27 @@ func (s *Server) SendMessage(w http.ResponseWriter, r *http.Request) {
 		storedBody := map[string]any{
 			"message": json.RawMessage(msg.Body),
 		}
-		if requiresPayment && len(req.Payment) > 0 && string(req.Payment) != "null" {
-			storedBody["payment"] = json.RawMessage(req.Payment)
+
+		// Include per-recipient payment (only their outputs, not full payment)
+		if recipientOutputs, ok := perRecipientOutputs[fr.recipient]; ok && req.Payment != nil {
+			perRecipientPayment := Payment{
+				Tx:             req.Payment.Tx,
+				Outputs:        recipientOutputs,
+				Description:    req.Payment.Description,
+				Labels:         req.Payment.Labels,
+				SeekPermission: req.Payment.SeekPermission,
+			}
+			storedBody["payment"] = perRecipientPayment
 		}
 
 		bodyBytes, _ := json.Marshal(storedBody)
 
 		if err := s.DB.InsertMessage(msgID, mbID, senderKey, fr.recipient, string(bodyBytes)); err != nil {
+			if errors.Is(err, db.ErrDuplicateMessage) {
+				logger.Error("duplicate message rejected", "messageId", msgID)
+				writeError(w, 400, "ERR_DUPLICATE_MESSAGE", "Duplicate message.")
+				return
+			}
 			logger.Error("failed to insert message", "error", err)
 			writeError(w, 500, "ERR_INTERNAL", "An internal error has occurred.")
 			return

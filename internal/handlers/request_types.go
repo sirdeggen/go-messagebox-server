@@ -6,7 +6,7 @@ import "encoding/json"
 // @Description Request to send a message to one or more recipients
 type SendMessageRequest struct {
 	Message *SendMessageBody `json:"message"`
-	Payment json.RawMessage  `json:"payment,omitempty"`
+	Payment *Payment         `json:"payment,omitempty"`
 }
 
 // SendMessageBody holds the message fields.
@@ -45,4 +45,44 @@ type SetPermissionRequest struct {
 	Sender       *string `json:"sender,omitempty" example:"03abc..."`
 	MessageBox   string  `json:"messageBox" example:"inbox"`
 	RecipientFee *int    `json:"recipientFee" example:"100"`
+}
+
+// Payment represents the payment transaction data for paid message delivery.
+// Contains an Atomic BEEF transaction and output mappings for internalization.
+// @Description Payment transaction for message delivery fees
+type Payment struct {
+	Tx             []byte          `json:"tx"` // Atomic BEEF (BRC-95) encoded transaction
+	Outputs        []PaymentOutput `json:"outputs"`
+	Description    string          `json:"description,omitempty"`
+	Labels         []string        `json:"labels,omitempty"`
+	SeekPermission *bool           `json:"seekPermission,omitempty"`
+}
+
+// PaymentOutput represents a single output in the payment transaction.
+// Specifies how an output should be internalized (as wallet payment or basket insertion).
+// @Description Single output mapping for payment internalization
+type PaymentOutput struct {
+	OutputIndex         uint32               `json:"outputIndex"`
+	Protocol            string               `json:"protocol"`                      // "wallet payment" or "basket insertion"
+	PaymentRemittance   *PaymentRemittance   `json:"paymentRemittance,omitempty"`   // Required for "wallet payment" protocol
+	InsertionRemittance *InsertionRemittance `json:"insertionRemittance,omitempty"` // Required for "basket insertion" protocol
+}
+
+// PaymentRemittance contains derivation info for the "wallet payment" protocol.
+// Used to derive the key that can unlock the payment output.
+// @Description Derivation info for wallet payment outputs
+type PaymentRemittance struct {
+	DerivationPrefix   string          `json:"derivationPrefix"`  // Base64-encoded derivation prefix
+	DerivationSuffix   string          `json:"derivationSuffix"`  // Base64-encoded derivation suffix
+	SenderIdentityKey  string          `json:"senderIdentityKey"` // public key hex
+	CustomInstructions json.RawMessage `json:"customInstructions,omitempty"`
+}
+
+// InsertionRemittance contains basket info for the "basket insertion" protocol.
+// Used to insert an output into a specific basket for later retrieval.
+// @Description Basket insertion info for output storage
+type InsertionRemittance struct {
+	Basket             string          `json:"basket"`
+	CustomInstructions json.RawMessage `json:"customInstructions,omitempty"`
+	Tags               []string        `json:"tags,omitempty"`
 }

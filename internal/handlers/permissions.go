@@ -243,13 +243,13 @@ func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var out []PermissionDetail
+	var out []PermissionDetailList
 	for _, p := range perms {
 		var senderVal *string
 		if p.Sender.Valid {
 			senderVal = &p.Sender.String
 		}
-		out = append(out, PermissionDetail{
+		out = append(out, PermissionDetailList{
 			Sender:       senderVal,
 			MessageBox:   p.MessageBox,
 			RecipientFee: p.RecipientFee,
@@ -259,7 +259,7 @@ func (s *Server) ListPermissions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if out == nil {
-		out = []PermissionDetail{}
+		out = []PermissionDetailList{}
 	}
 
 	writeJSON(w, 200, ListPermissionsResponse{
