@@ -13,10 +13,10 @@ import (
 
 	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
 	_ "github.com/bsv-blockchain/go-messagebox-server/docs"
-	"github.com/bsv-blockchain/go-messagebox-server/internal/config"
-	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/firebase"
-	"github.com/bsv-blockchain/go-messagebox-server/internal/handlers"
+	"github.com/bsv-blockchain/go-messagebox-server/pkg/config"
+	"github.com/bsv-blockchain/go-messagebox-server/pkg/db"
+	"github.com/bsv-blockchain/go-messagebox-server/pkg/handlers"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
 	sdk "github.com/bsv-blockchain/go-sdk/wallet"

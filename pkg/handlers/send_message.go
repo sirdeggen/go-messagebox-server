@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bsv-blockchain/go-messagebox-server/internal/db"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/firebase"
 	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
+	"github.com/bsv-blockchain/go-messagebox-server/pkg/db"
 	sdk "github.com/bsv-blockchain/go-sdk/wallet"
 )
 
