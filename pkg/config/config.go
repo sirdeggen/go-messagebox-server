@@ -15,7 +15,7 @@ type Config struct {
 	EnableWebsockets bool
 
 	// Database
-	DBDriver string // "mysql" or "sqlite3"
+	DBDriver string // "sqlite3", "postgres", or "mysql"
 	DBSource string // DSN or file path
 
 	// Firebase (optional)

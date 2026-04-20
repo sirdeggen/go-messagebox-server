@@ -68,10 +68,10 @@ func TestInsertAndListMessages(t *testing.T) {
 		t.Fatalf("expected msg1, got %s", msgs[0].MessageID)
 	}
 
-	// Duplicate insert should be ignored
+	// Duplicate insert should return ErrDuplicateMessage
 	err = d.InsertMessage("msg1", mbID, "sender1", "recipient1", `{"message":"hello"}`)
-	if err != nil {
-		t.Fatal(err)
+	if err != ErrDuplicateMessage {
+		t.Fatalf("expected ErrDuplicateMessage, got %v", err)
 	}
 	msgs, _ = d.ListMessages("recipient1", mbID)
 	if len(msgs) != 1 {

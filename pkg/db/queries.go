@@ -54,8 +54,9 @@ type DeviceRecord struct {
 // EnsureMessageBox creates a messageBox if it doesn't exist, returns the messageBoxId.
 func (d *DB) EnsureMessageBox(identityKey, boxType string) (int64, error) {
 	now := time.Now()
-	_, err := d.Exec(
-		`INSERT OR IGNORE INTO messageBox (identityKey, type, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+	_, err := d.exec(
+		`INSERT INTO messageBox (identityKey, type, created_at, updated_at) VALUES (?, ?, ?, ?)
+		 ON CONFLICT (type, identityKey) DO NOTHING`,
 		identityKey, boxType, now, now,
 	)
 	if err != nil {
@@ -63,14 +64,14 @@ func (d *DB) EnsureMessageBox(identityKey, boxType string) (int64, error) {
 	}
 
 	var id int64
-	err = d.QueryRow(`SELECT messageBoxId FROM messageBox WHERE identityKey = ? AND type = ?`, identityKey, boxType).Scan(&id)
+	err = d.queryRow(`SELECT messageBoxId FROM messageBox WHERE identityKey = ? AND type = ?`, identityKey, boxType).Scan(&id)
 	return id, err
 }
 
 // GetMessageBoxID returns the messageBoxId for a given identity and type.
 func (d *DB) GetMessageBoxID(identityKey, boxType string) (int64, error) {
 	var id int64
-	err := d.QueryRow(`SELECT messageBoxId FROM messageBox WHERE identityKey = ? AND type = ?`, identityKey, boxType).Scan(&id)
+	err := d.queryRow(`SELECT messageBoxId FROM messageBox WHERE identityKey = ? AND type = ?`, identityKey, boxType).Scan(&id)
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}
@@ -80,8 +81,9 @@ func (d *DB) GetMessageBoxID(identityKey, boxType string) (int64, error) {
 // InsertMessage inserts a message. Returns ErrDuplicateMessage if the messageId already exists.
 func (d *DB) InsertMessage(messageID string, messageBoxID int64, sender, recipient, body string) error {
 	now := time.Now()
-	res, err := d.Exec(
-		`INSERT OR IGNORE INTO messages (messageId, messageBoxId, sender, recipient, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+	res, err := d.exec(
+		`INSERT INTO messages (messageId, messageBoxId, sender, recipient, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT (messageId) DO NOTHING`,
 		messageID, messageBoxID, sender, recipient, body, now, now,
 	)
 	if err != nil {
@@ -99,7 +101,7 @@ func (d *DB) InsertMessage(messageID string, messageBoxID int64, sender, recipie
 
 // ListMessages returns messages for a recipient in a specific messageBox.
 func (d *DB) ListMessages(recipient string, messageBoxID int64) ([]MessageRecord, error) {
-	rows, err := d.Query(
+	rows, err := d.query(
 		`SELECT messageId, body, sender, created_at, updated_at FROM messages WHERE recipient = ? AND messageBoxId = ?`,
 		recipient, messageBoxID,
 	)
@@ -135,7 +137,7 @@ func (d *DB) AcknowledgeMessages(recipient string, messageIDs []string) (int64, 
 		args = append(args, id)
 	}
 	query += ")"
-	res, err := d.Exec(query, args...)
+	res, err := d.exec(query, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -145,7 +147,7 @@ func (d *DB) AcknowledgeMessages(recipient string, messageIDs []string) (int64, 
 // GetServerDeliveryFee returns the server delivery fee for a message box type.
 func (d *DB) GetServerDeliveryFee(messageBox string) (int, error) {
 	var fee int
-	err := d.QueryRow(`SELECT delivery_fee FROM server_fees WHERE message_box = ?`, messageBox).Scan(&fee)
+	err := d.queryRow(`SELECT delivery_fee FROM server_fees WHERE message_box = ?`, messageBox).Scan(&fee)
 	if err == sql.ErrNoRows {
 		return 0, nil
 	}
@@ -158,7 +160,7 @@ func (d *DB) GetRecipientFee(recipient, sender, messageBox string) (int, error) 
 	// Try sender-specific first
 	if sender != "" {
 		var fee int
-		err := d.QueryRow(
+		err := d.queryRow(
 			`SELECT recipient_fee FROM message_permissions WHERE recipient = ? AND sender = ? AND message_box = ?`,
 			recipient, sender, messageBox,
 		).Scan(&fee)
@@ -172,7 +174,7 @@ func (d *DB) GetRecipientFee(recipient, sender, messageBox string) (int, error) 
 
 	// Try box-wide default
 	var fee int
-	err := d.QueryRow(
+	err := d.queryRow(
 		`SELECT recipient_fee FROM message_permissions WHERE recipient = ? AND sender IS NULL AND message_box = ?`,
 		recipient, messageBox,
 	).Scan(&fee)
@@ -186,8 +188,9 @@ func (d *DB) GetRecipientFee(recipient, sender, messageBox string) (int, error) 
 	// Auto-create box-wide default
 	defaultFee := smartDefaultFee(messageBox)
 	now := time.Now()
-	_, err = d.Exec(
-		`INSERT OR IGNORE INTO message_permissions (recipient, sender, message_box, recipient_fee, created_at, updated_at) VALUES (?, NULL, ?, ?, ?, ?)`,
+	_, err = d.exec(
+		`INSERT INTO message_permissions (recipient, sender, message_box, recipient_fee, created_at, updated_at) VALUES (?, NULL, ?, ?, ?, ?)
+		 ON CONFLICT DO NOTHING`,
 		recipient, messageBox, defaultFee, now, now,
 	)
 	if err != nil {
@@ -207,10 +210,10 @@ func smartDefaultFee(messageBox string) int {
 func (d *DB) SetMessagePermission(recipient string, sender *string, messageBox string, recipientFee int) error {
 	now := time.Now()
 
-	// SQLite treats NULL != NULL for unique constraints, so we need special handling
+	// NULL != NULL in unique constraints for both SQLite and PostgreSQL, so we need special handling
 	if sender == nil {
 		// Try update first
-		res, err := d.Exec(
+		res, err := d.exec(
 			`UPDATE message_permissions SET recipient_fee = ?, updated_at = ? WHERE recipient = ? AND sender IS NULL AND message_box = ?`,
 			recipientFee, now, recipient, messageBox,
 		)
@@ -222,7 +225,7 @@ func (d *DB) SetMessagePermission(recipient string, sender *string, messageBox s
 			return nil
 		}
 		// Insert
-		_, err = d.Exec(
+		_, err = d.exec(
 			`INSERT INTO message_permissions (recipient, sender, message_box, recipient_fee, created_at, updated_at) VALUES (?, NULL, ?, ?, ?, ?)`,
 			recipient, messageBox, recipientFee, now, now,
 		)
@@ -230,7 +233,7 @@ func (d *DB) SetMessagePermission(recipient string, sender *string, messageBox s
 	}
 
 	// For non-null sender, ON CONFLICT works fine
-	_, err := d.Exec(
+	_, err := d.exec(
 		`INSERT INTO message_permissions (recipient, sender, message_box, recipient_fee, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(recipient, sender, message_box) DO UPDATE SET recipient_fee = ?, updated_at = ?`,
@@ -244,12 +247,12 @@ func (d *DB) GetPermission(recipient string, sender *string, messageBox string) 
 	var p PermissionRecord
 	var err error
 	if sender != nil {
-		err = d.QueryRow(
+		err = d.queryRow(
 			`SELECT id, recipient, sender, message_box, recipient_fee, created_at, updated_at FROM message_permissions WHERE recipient = ? AND sender = ? AND message_box = ?`,
 			recipient, *sender, messageBox,
 		).Scan(&p.ID, &p.Recipient, &p.Sender, &p.MessageBox, &p.RecipientFee, &p.CreatedAt, &p.UpdatedAt)
 	} else {
-		err = d.QueryRow(
+		err = d.queryRow(
 			`SELECT id, recipient, sender, message_box, recipient_fee, created_at, updated_at FROM message_permissions WHERE recipient = ? AND sender IS NULL AND message_box = ?`,
 			recipient, messageBox,
 		).Scan(&p.ID, &p.Recipient, &p.Sender, &p.MessageBox, &p.RecipientFee, &p.CreatedAt, &p.UpdatedAt)
@@ -274,7 +277,7 @@ func (d *DB) ListPermissions(recipient string, messageBox *string, limit, offset
 	}
 
 	var total int
-	if err := d.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+	if err := d.queryRow(countQuery, countArgs...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -289,7 +292,7 @@ func (d *DB) ListPermissions(recipient string, messageBox *string, limit, offset
 	query += ` LIMIT ? OFFSET ?`
 	args = append(args, limit, offset)
 
-	rows, err := d.Query(query, args...)
+	rows, err := d.query(query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -309,22 +312,21 @@ func (d *DB) ListPermissions(recipient string, messageBox *string, limit, offset
 // RegisterDevice inserts or updates a device registration.
 func (d *DB) RegisterDevice(identityKey, fcmToken string, deviceID, platform *string) (int64, error) {
 	now := time.Now()
-	res, err := d.Exec(
+	var id int64
+	err := d.queryRow(
 		`INSERT INTO device_registrations (identity_key, fcm_token, device_id, platform, created_at, updated_at, active, last_used)
-		 VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-		 ON CONFLICT(fcm_token) DO UPDATE SET identity_key = ?, device_id = ?, platform = ?, updated_at = ?, active = 1, last_used = ?`,
+		 VALUES (?, ?, ?, ?, ?, ?, TRUE, ?)
+		 ON CONFLICT(fcm_token) DO UPDATE SET identity_key = ?, device_id = ?, platform = ?, updated_at = ?, active = TRUE, last_used = ?
+		 RETURNING id`,
 		identityKey, fcmToken, deviceID, platform, now, now, now,
 		identityKey, deviceID, platform, now, now,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return res.LastInsertId()
+	).Scan(&id)
+	return id, err
 }
 
 // ListDevices returns all device registrations for an identity key.
 func (d *DB) ListDevices(identityKey string) ([]DeviceRecord, error) {
-	rows, err := d.Query(
+	rows, err := d.query(
 		`SELECT id, identity_key, fcm_token, device_id, platform, active, created_at, updated_at, last_used
 		 FROM device_registrations WHERE identity_key = ? ORDER BY updated_at DESC`,
 		identityKey,
@@ -347,9 +349,9 @@ func (d *DB) ListDevices(identityKey string) ([]DeviceRecord, error) {
 
 // ListActiveDevices returns all active FCM tokens for an identity key.
 func (d *DB) ListActiveDevices(identityKey string) ([]DeviceRecord, error) {
-	rows, err := d.Query(
+	rows, err := d.query(
 		`SELECT id, identity_key, fcm_token, device_id, platform, active, created_at, updated_at, last_used
-		 FROM device_registrations WHERE identity_key = ? AND active = 1 ORDER BY updated_at DESC`,
+		 FROM device_registrations WHERE identity_key = ? AND active = TRUE ORDER BY updated_at DESC`,
 		identityKey,
 	)
 	if err != nil {
@@ -371,7 +373,7 @@ func (d *DB) ListActiveDevices(identityKey string) ([]DeviceRecord, error) {
 
 // UpdateDeviceLastUsed updates the last_used timestamp for a device.
 func (d *DB) UpdateDeviceLastUsed(fcmToken string) error {
-	_, err := d.Exec(
+	_, err := d.exec(
 		`UPDATE device_registrations SET last_used = ?, updated_at = ? WHERE fcm_token = ?`,
 		time.Now(),
 		time.Now(),
@@ -383,8 +385,8 @@ func (d *DB) UpdateDeviceLastUsed(fcmToken string) error {
 
 // DeactivateDevice marks a device as inactive (invalid token).
 func (d *DB) DeactivateDevice(fcmToken string) error {
-	_, err := d.Exec(
-		`UPDATE device_registrations SET active= 0, updated_at = ? WHERE fcm_token = ?`,
+	_, err := d.exec(
+		`UPDATE device_registrations SET active = FALSE, updated_at = ? WHERE fcm_token = ?`,
 		time.Now(),
 		fcmToken,
 	)

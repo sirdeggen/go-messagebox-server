@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: messagebox
+      POSTGRES_PASSWORD: messagebox
+      POSTGRES_DB: messagebox
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U messagebox"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  messagebox:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      SERVER_PRIVATE_KEY: 4f1f715fd10bfa3549d3caf487a4be95523d7bcb8f82abe1a3c91494a09c05f5
+      DB_DRIVER: postgres
+      DB_SOURCE: postgres://messagebox:messagebox@postgres:5432/messagebox?sslmode=disable
+      BSV_NETWORK: mainnet
+      WALLET_STORAGE_URL: https://store-us-1.bsvb.tech
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

@@ -7,7 +7,10 @@ require (
 	github.com/bsv-blockchain/go-bsv-middleware v0.12.4
 	github.com/bsv-blockchain/go-sdk v1.2.18
 	github.com/bsv-blockchain/go-wallet-toolbox v0.172.1
+	github.com/lib/pq v1.11.1
 	github.com/mattn/go-sqlite3 v1.14.34
+	github.com/swaggo/http-swagger/v2 v2.0.2
+	github.com/swaggo/swag v1.16.6
 	google.golang.org/api v0.269.0
 )
 
@@ -161,7 +164,6 @@ require (
 	github.com/kpango/fastime v1.1.10 // indirect
 	github.com/labstack/echo/v4 v4.15.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
-	github.com/lib/pq v1.11.1 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.3.0 // indirect
@@ -255,8 +257,6 @@ require (
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/swaggo/files/v2 v2.0.0 // indirect
-	github.com/swaggo/http-swagger/v2 v2.0.2 // indirect
-	github.com/swaggo/swag v1.16.6 // indirect
 	github.com/uber/jaeger-client-go v2.30.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
