@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"firebase.google.com/go/v4/messaging"
-	"github.com/bsv-blockchain/go-messagebox-server/pkg/db"
-	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
+	"github.com/bsv-blockchain/go-message-box-server/pkg/db"
+	"github.com/bsv-blockchain/go-message-box-server/internal/logger"
 )
 
 var DEVICE_SEND_MESSAGE_TIMEOUT = 5 * time.Second

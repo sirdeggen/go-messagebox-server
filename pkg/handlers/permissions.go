@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
+	"github.com/bsv-blockchain/go-message-box-server/internal/logger"
 )
 
 // SetPermission godoc

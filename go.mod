@@ -1,4 +1,4 @@
-module github.com/bsv-blockchain/go-messagebox-server
+module github.com/bsv-blockchain/go-message-box-server
 
 go 1.25.4
 

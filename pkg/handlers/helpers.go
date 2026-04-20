@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/bsv-blockchain/go-bsv-middleware/pkg/middleware"
-	"github.com/bsv-blockchain/go-messagebox-server/internal/logger"
-	"github.com/bsv-blockchain/go-messagebox-server/pkg/db"
+	"github.com/bsv-blockchain/go-message-box-server/internal/logger"
+	"github.com/bsv-blockchain/go-message-box-server/pkg/db"
 	ec "github.com/bsv-blockchain/go-sdk/primitives/ec"
 	sdk "github.com/bsv-blockchain/go-sdk/wallet"
 )

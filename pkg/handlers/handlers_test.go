@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bsv-blockchain/go-messagebox-server/pkg/db"
+	"github.com/bsv-blockchain/go-message-box-server/pkg/db"
 )
 
 // mockIdentityKey is used for tests - we bypass the middleware auth
